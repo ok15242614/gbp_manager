@@ -18,6 +18,19 @@ function generateDoc() {
     const ss = SpreadsheetApp.openById(spreadsheetId);
     const sheets = ss.getSheets();
   
+    // yyyy年mm月形式のサブフォルダ名を作成
+    const now = new Date();
+    const yearMonthFolderName = Utilities.formatDate(now, Session.getScriptTimeZone(), "yyyy年MM月");
+    const parentFolder = DriveApp.getFolderById(folderId);
+    let subFolder;
+    // サブフォルダが存在するか確認
+    const folders = parentFolder.getFoldersByName(yearMonthFolderName);
+    if (folders.hasNext()) {
+      subFolder = folders.next();
+    } else {
+      subFolder = parentFolder.createFolder(yearMonthFolderName);
+    }
+  
     sheets.forEach(sheet => {
       const sheetName = sheet.getName(); // シート名 = 店舗名として利用
       // 実行時の月を取得（2025年7月1日なので「7」となる）
@@ -26,6 +39,8 @@ function generateDoc() {
   
       // 新しいGoogleドキュメントを作成
       const newDoc = DocumentApp.create(docTitle);
+      const docFile = DriveApp.getFileById(newDoc.getId());
+      docFile.moveTo(subFolder); // まずサブフォルダに移動
       const body = newDoc.getBody();
   
       // ドキュメントのタイトル/見出しを追加
@@ -93,11 +108,6 @@ function generateDoc() {
         body.appendParagraph(`${content}`);     // 口コミ内容のみ
       });
   
-      // 作成したドキュメントを特定のフォルダに移動
-      const docFile = DriveApp.getFileById(newDoc.getId());
-      const folder = DriveApp.getFolderById(folderId);
-      docFile.moveTo(folder);
-  
-      Logger.log(`ドキュメント「${newDoc.getName()}」を生成し、フォルダ「${folder.getName()}」に保存しました。URL: ${newDoc.getUrl()}`);
+      Logger.log(`ドキュメント「${newDoc.getName()}」を生成し、フォルダ「${subFolder.getName()}」に保存しました。URL: ${newDoc.getUrl()}`);
     });
   }
