@@ -1,10 +1,8 @@
 /**
- * 指定年月の口コミデータをGoogleドキュメントで出力。
- * @param {string} targetYearMonth 'yyyy年M月'（例: '2024年6月'）。未指定は直前の月。
- * @param {boolean} outputIndividualDocs 店舗別も出力するか（デフォルトtrue）
+ * 指定した年月の口コミデータのみを出力する（将来的にUIから指定可能な設計）
+ * @param {string} targetYearMonth - 'yyyy年M月' 形式（例: '2024年6月'）。未指定時は直前の月。
  */
-
-function generateDoc(targetYearMonth, outputIndividualDocs = true) {
+function generateDoc(targetYearMonth) {
     // スクリプトプロパティからIDを取得
     const spreadsheetId = PropertiesService.getScriptProperties().getProperty('SPREADSHEET_ID');
     const folderId = PropertiesService.getScriptProperties().getProperty('FOLDER_ID');
@@ -62,22 +60,15 @@ function generateDoc(targetYearMonth, outputIndividualDocs = true) {
       const sheetName = sheet.getName();
       const docTitle = `【${yearMonthStr}】${sheetName} 口コミレポート`;
   
-      // --- 店舗別ドキュメント出力フラグ ---
-      let body;
-      if (outputIndividualDocs) {
-        // 新しいGoogleドキュメントを作成
-        const newDoc = DocumentApp.create(docTitle);
-        const docFile = DriveApp.getFileById(newDoc.getId());
-        docFile.moveTo(subFolder); 
-        body = newDoc.getBody();
-        // ドキュメントのタイトル/見出しを追加
-        body.appendParagraph(`【${sheetName}】口コミデータ`).setHeading(DocumentApp.ParagraphHeading.HEADING1);
-        body.appendParagraph('---');
-      } else {
-        // 店舗別ドキュメントを出力しない場合は一時的なBody風オブジェクトを作る
-        body = DocumentApp.create('temp').getBody();
-        body.clear();
-      }
+      // 新しいGoogleドキュメントを作成
+      const newDoc = DocumentApp.create(docTitle);
+      const docFile = DriveApp.getFileById(newDoc.getId());
+      docFile.moveTo(subFolder); 
+      const body = newDoc.getBody();
+  
+      // ドキュメントのタイトル/見出しを追加
+      body.appendParagraph(`【${sheetName}】口コミデータ`).setHeading(DocumentApp.ParagraphHeading.HEADING1);
+      body.appendParagraph('---');
   
       const lastRow = sheet.getLastRow();
       const lastColumn = sheet.getLastColumn();
@@ -149,9 +140,7 @@ function generateDoc(targetYearMonth, outputIndividualDocs = true) {
         paragraphs: body.getParagraphs().map(p => p.copy())
       });
   
-      if (outputIndividualDocs) {
-        Logger.log(`ドキュメント「${docTitle}」を生成し、フォルダ「${subFolder.getName()}」に保存しました。`);
-      }
+      Logger.log(`ドキュメント「${newDoc.getName()}」を生成し、フォルダ「${subFolder.getName()}」に保存しました。URL: ${newDoc.getUrl()}`);
     });
   
     // --- 全店舗まとめドキュメント作成 ---
