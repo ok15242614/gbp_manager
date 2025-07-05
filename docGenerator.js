@@ -1,4 +1,8 @@
-function generateDoc() {
+/**
+ * 指定した年月の口コミデータのみを出力する（将来的にUIから指定可能な設計）
+ * @param {string} targetYearMonth - 'yyyy年M月' 形式（例: '2024年6月'）。未指定時は直前の月。
+ */
+function generateDoc(targetYearMonth) {
     // スクリプトプロパティからIDを取得
     const spreadsheetId = PropertiesService.getScriptProperties().getProperty('SPREADSHEET_ID');
     const folderId = PropertiesService.getScriptProperties().getProperty('FOLDER_ID');
@@ -15,12 +19,26 @@ function generateDoc() {
       return;
     }
   
-    const ss = SpreadsheetApp.openById(spreadsheetId);
-    const sheets = ss.getSheets();
-  
-    // 年月文字列を取得（例：2024年6月）
-    const now = new Date();
-    const yearMonthStr = Utilities.formatDate(now, Session.getScriptTimeZone(), "yyyy年M月");
+    // 対象年月の決定
+    let yearMonthStr = targetYearMonth;
+    let targetYear, targetMonth;
+    if (!yearMonthStr) {
+      // 未指定なら直前の月
+      const now = new Date();
+      const prevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      yearMonthStr = Utilities.formatDate(prevMonth, Session.getScriptTimeZone(), "yyyy年M月");
+      targetYear = prevMonth.getFullYear();
+      targetMonth = prevMonth.getMonth() + 1;
+    } else {
+      // 'yyyy年M月' 形式から年・月を抽出
+      const m = yearMonthStr.match(/(\d{4})年(\d{1,2})月/);
+      if (m) {
+        targetYear = parseInt(m[1], 10);
+        targetMonth = parseInt(m[2], 10);
+      } else {
+        throw new Error('targetYearMonthの形式が不正です: ' + yearMonthStr);
+      }
+    }
     const yearMonthFolderName = yearMonthStr;
     const parentFolder = DriveApp.getFolderById(folderId);
     let subFolder;
@@ -34,6 +52,9 @@ function generateDoc() {
   
     // 全店舗まとめ用データを格納する配列
     const mergedContents = [];
+  
+    const ss = SpreadsheetApp.openById(spreadsheetId);
+    const sheets = ss.getSheets();
   
     sheets.forEach(sheet => {
       const sheetName = sheet.getName();
@@ -57,7 +78,29 @@ function generateDoc() {
       }
       const allData = sheet.getRange(2, 1, lastRow - 1, lastColumn).getValues();
   
-      allData.forEach((row, index) => {
+      // 指定年月の口コミのみ抽出
+      const filteredData = allData.filter(row => {
+        const rawDate = row[0];
+        let y = null, m = null;
+        if (rawDate instanceof Date) {
+          y = rawDate.getFullYear();
+          m = rawDate.getMonth() + 1;
+        } else if (typeof rawDate === 'string' && rawDate.match(/^\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2}$/)) {
+          const parsed = new Date(rawDate);
+          if (!isNaN(parsed.getTime())) {
+            y = parsed.getFullYear();
+            m = parsed.getMonth() + 1;
+          }
+        }
+        return y === targetYear && m === targetMonth;
+      });
+  
+      if (filteredData.length === 0) {
+        Logger.log(`シート「${sheetName}」に対象月の口コミデータがありません。スキップします。`);
+        return;
+      }
+  
+      filteredData.forEach((row, index) => {
         if (index > 0) {
           body.appendParagraph('');
           body.appendParagraph('---');
