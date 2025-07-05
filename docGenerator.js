@@ -18,9 +18,10 @@ function generateDoc() {
     const ss = SpreadsheetApp.openById(spreadsheetId);
     const sheets = ss.getSheets();
   
-    // yyyy年mm月形式のサブフォルダ名を作成
+    // 年月文字列を取得（例：2024年6月）
     const now = new Date();
-    const yearMonthFolderName = Utilities.formatDate(now, Session.getScriptTimeZone(), "yyyy年MM月");
+    const yearMonthStr = Utilities.formatDate(now, Session.getScriptTimeZone(), "yyyy年M月");
+    const yearMonthFolderName = yearMonthStr;
     const parentFolder = DriveApp.getFolderById(folderId);
     let subFolder;
     // サブフォルダが存在するか確認
@@ -35,9 +36,8 @@ function generateDoc() {
     const mergedContents = [];
   
     sheets.forEach(sheet => {
-      const sheetName = sheet.getName(); // シート名 = 店舗名として利用
-      const currentMonth = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "M"); 
-      const docTitle = `Google口コミ【${currentMonth}月／${sheetName}】`;
+      const sheetName = sheet.getName();
+      const docTitle = `【${yearMonthStr}】${sheetName} 口コミレポート`;
   
       // 新しいGoogleドキュメントを作成
       const newDoc = DocumentApp.create(docTitle);
@@ -93,9 +93,8 @@ function generateDoc() {
         body.appendParagraph(`${content}`);
       });
   
-      // 合体用データとして保存（装飾を維持したい場合はgetBody().copy()も可）
+      // 合体用データとして保存（タイトルなし、本文のみ）
       mergedContents.push({
-        title: docTitle,
         paragraphs: body.getParagraphs().map(p => p.copy())
       });
   
@@ -104,18 +103,18 @@ function generateDoc() {
   
     // --- 合体ドキュメント作成 ---
     if (mergedContents.length > 0) {
-      const mergedDoc = DocumentApp.create(`合体ドキュメント_${yearMonthFolderName}`);
+      const mergedDocTitle = `【${yearMonthStr}】全店舗口コミレポート`;
+      const mergedDoc = DocumentApp.create(mergedDocTitle);
       const mergedDocFile = DriveApp.getFileById(mergedDoc.getId());
       mergedDocFile.moveTo(subFolder);
       const mergedBody = mergedDoc.getBody();
       mergedBody.clear(); // デフォルトの空段落を削除
       mergedContents.forEach((item, idx) => {
-        mergedBody.appendParagraph(item.title).setHeading(DocumentApp.ParagraphHeading.HEADING1);
         item.paragraphs.forEach(p => mergedBody.appendParagraph(p));
         if (idx < mergedContents.length - 1) {
           mergedBody.appendPageBreak();
         }
       });
-      Logger.log(`合体ドキュメント「${mergedDoc.getName()}」を生成し、フォルダ「${subFolder.getName()}」に保存しました。URL: ${mergedDoc.getUrl()}`);
+      Logger.log(`全店舗まとめドキュメント「${mergedDoc.getName()}」を生成し、フォルダ「${subFolder.getName()}」に保存しました。URL: ${mergedDoc.getUrl()}`);
     }
   }
