@@ -48,7 +48,6 @@ function generateDoc() {
       // ドキュメントのタイトル/見出しを追加
       body.appendParagraph(`【${sheetName}】口コミデータ`).setHeading(DocumentApp.ParagraphHeading.HEADING1);
       body.appendParagraph('---');
-      body.appendParagraph('');
   
       const lastRow = sheet.getLastRow();
       const lastColumn = sheet.getLastColumn();
@@ -62,7 +61,6 @@ function generateDoc() {
         if (index > 0) {
           body.appendParagraph('');
           body.appendParagraph('---');
-          body.appendParagraph('');
         }
         const rawDate = row[0];
         const rawRating = row[1];
@@ -90,6 +88,7 @@ function generateDoc() {
         }
         body.appendParagraph(`${formattedDate}`);
         body.appendParagraph(`${starRating}`);
+        body.appendParagraph('');
         body.appendParagraph(`${content}`);
       });
   
