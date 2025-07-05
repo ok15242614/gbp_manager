@@ -1,4 +1,4 @@
-function transferAllDataToDocumentGrouped() {
+function generateDoc() {
     // スクリプトプロパティからIDを取得
     const spreadsheetId = PropertiesService.getScriptProperties().getProperty('SPREADSHEET_ID');
     const folderId = PropertiesService.getScriptProperties().getProperty('FOLDER_ID');
