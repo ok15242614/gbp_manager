@@ -32,7 +32,7 @@ function generateDoc() {
       subFolder = parentFolder.createFolder(yearMonthFolderName);
     }
   
-    // 合体用データを格納する配列
+    // 全店舗まとめ用データを格納する配列
     const mergedContents = [];
   
     sheets.forEach(sheet => {
@@ -42,7 +42,7 @@ function generateDoc() {
       // 新しいGoogleドキュメントを作成
       const newDoc = DocumentApp.create(docTitle);
       const docFile = DriveApp.getFileById(newDoc.getId());
-      docFile.moveTo(subFolder); // まずサブフォルダに移動
+      docFile.moveTo(subFolder); 
       const body = newDoc.getBody();
   
       // ドキュメントのタイトル/見出しを追加
@@ -92,7 +92,7 @@ function generateDoc() {
         body.appendParagraph(`${content}`);
       });
   
-      // 合体用データとして保存（タイトルなし、本文のみ）
+      // 全店舗まとめデータとして保存（タイトルなし、本文のみ）
       mergedContents.push({
         paragraphs: body.getParagraphs().map(p => p.copy())
       });
@@ -100,14 +100,14 @@ function generateDoc() {
       Logger.log(`ドキュメント「${newDoc.getName()}」を生成し、フォルダ「${subFolder.getName()}」に保存しました。URL: ${newDoc.getUrl()}`);
     });
   
-    // --- 合体ドキュメント作成 ---
+    // --- 全店舗まとめドキュメント作成 ---
     if (mergedContents.length > 0) {
       const mergedDocTitle = `【${yearMonthStr}】全店舗口コミレポート`;
       const mergedDoc = DocumentApp.create(mergedDocTitle);
       const mergedDocFile = DriveApp.getFileById(mergedDoc.getId());
       mergedDocFile.moveTo(subFolder);
       const mergedBody = mergedDoc.getBody();
-      mergedBody.clear(); // デフォルトの空段落を削除
+      mergedBody.clear();
       mergedContents.forEach((item, idx) => {
         item.paragraphs.forEach(p => mergedBody.appendParagraph(p));
         if (idx < mergedContents.length - 1) {
