@@ -31,11 +31,13 @@ function generateDoc() {
       subFolder = parentFolder.createFolder(yearMonthFolderName);
     }
   
+    // 合体用データを格納する配列
+    const mergedContents = [];
+  
     sheets.forEach(sheet => {
       const sheetName = sheet.getName(); // シート名 = 店舗名として利用
-      // 実行時の月を取得（2025年7月1日なので「7」となる）
       const currentMonth = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "M"); 
-      const docTitle = `Google口コミ【${currentMonth}月／${sheetName}】`; // ドキュメントタイトル
+      const docTitle = `Google口コミ【${currentMonth}月／${sheetName}】`;
   
       // 新しいGoogleドキュメントを作成
       const newDoc = DocumentApp.create(docTitle);
@@ -45,69 +47,75 @@ function generateDoc() {
   
       // ドキュメントのタイトル/見出しを追加
       body.appendParagraph(`【${sheetName}】口コミデータ`).setHeading(DocumentApp.ParagraphHeading.HEADING1);
-      body.appendParagraph('---'); // 区切り線
-      body.appendParagraph(''); // 空行で区切り
+      body.appendParagraph('---');
+      body.appendParagraph('');
   
-      // スプレッドシートのデータを読み込み（ヘッダー行を除いて2行目から開始）
-      // 各行に1つの口コミデータが横に並んでいる想定
       const lastRow = sheet.getLastRow();
       const lastColumn = sheet.getLastColumn();
-  
-      if (lastRow <= 1 || lastColumn === 0) { // ヘッダー行のみの場合はデータなしと判断
+      if (lastRow <= 1 || lastColumn === 0) {
         Logger.log(`シート「${sheetName}」には口コミデータがありません。スキップします。`);
         return;
       }
-  
-      // ヘッダー行は読み飛ばし、2行目から最終行までを各口コミとして処理
-      // 取得範囲: 2行目, 1列目 から 最終行, 最終列 まで
       const allData = sheet.getRange(2, 1, lastRow - 1, lastColumn).getValues();
   
       allData.forEach((row, index) => {
-        // 各口コミの間に区切り線を追加（最初の口コミ以外）
         if (index > 0) {
-          body.appendParagraph(''); // 空行で区切り
-          body.appendParagraph('---'); // 区切り線
-          body.appendParagraph(''); // 空行で区切り
+          body.appendParagraph('');
+          body.appendParagraph('---');
+          body.appendParagraph('');
         }
-  
-        // 各口コミの項目を取得 (スプレッドシートの列順を想定)
-        const rawDate = row[0]; // 日付 (Dateオブジェクトまたは文字列)
-        const rawRating = row[1]; // 評価の数字
-        const name = String(row[2] || '').trim(); // 名前
-        const content = String(row[3] || '').trim(); // 口コミ内容
-  
-        // 日付のフォーマットを「M月d日」に変換
-        let formattedDate = String(rawDate || '').trim(); // デフォルトはrawDateを文字列化したもの
+        const rawDate = row[0];
+        const rawRating = row[1];
+        const name = String(row[2] || '').trim();
+        const content = String(row[3] || '').trim();
+        let formattedDate = String(rawDate || '').trim();
         if (rawDate instanceof Date) {
           formattedDate = Utilities.formatDate(rawDate, Session.getScriptTimeZone(), "M月d日");
-        } else if (typeof rawDate === 'string' && rawDate.match(/^\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2}$/)) { // YYYY/MM/DD や YYYY-MM-DD 形式の文字列日付
+        } else if (typeof rawDate === 'string' && rawDate.match(/^\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2}$/)) {
           try {
             const parsedDate = new Date(rawDate);
-            if (!isNaN(parsedDate.getTime())) { // 有効な日付にパースできた場合
+            if (!isNaN(parsedDate.getTime())) {
               formattedDate = Utilities.formatDate(parsedDate, Session.getScriptTimeZone(), "M月d日");
             }
           } catch (e) {
             Logger.log(`日付のパースに失敗しました: ${rawDate}, エラー: ${e.message}`);
           }
         }
-        
-        // 評価を星の数に変換
         let starRating = '';
-        const ratingNumber = parseInt(rawRating); // 評価を数値に変換
+        const ratingNumber = parseInt(rawRating);
         if (!isNaN(ratingNumber) && ratingNumber >= 0 && ratingNumber <= 5) {
           starRating = '★'.repeat(ratingNumber) + '☆'.repeat(5 - ratingNumber);
         } else {
-          starRating = String(rawRating || '(評価なし)'); // 無効な値の場合はそのまま表示または「評価なし」
+          starRating = String(rawRating || '(評価なし)');
         }
+        body.appendParagraph(`${formattedDate}`);
+        body.appendParagraph(`${starRating}`);
+        body.appendParagraph(`${content}`);
+      });
   
-        // 各項目を改行して出力（ラベルなし）
-        body.appendParagraph(`${formattedDate}`); // 日付のみ
-        body.appendParagraph(`${starRating}`);   // 評価のみ
-        // 名前は、元のドキュメントになかったため、今回は出力しない
-        // body.appendParagraph(`${name}`); // 必要ならこの行を有効にする
-        body.appendParagraph(`${content}`);     // 口コミ内容のみ
+      // 合体用データとして保存（装飾を維持したい場合はgetBody().copy()も可）
+      mergedContents.push({
+        title: docTitle,
+        paragraphs: body.getParagraphs().map(p => p.copy())
       });
   
       Logger.log(`ドキュメント「${newDoc.getName()}」を生成し、フォルダ「${subFolder.getName()}」に保存しました。URL: ${newDoc.getUrl()}`);
     });
+  
+    // --- 合体ドキュメント作成 ---
+    if (mergedContents.length > 0) {
+      const mergedDoc = DocumentApp.create(`合体ドキュメント_${yearMonthFolderName}`);
+      const mergedDocFile = DriveApp.getFileById(mergedDoc.getId());
+      mergedDocFile.moveTo(subFolder);
+      const mergedBody = mergedDoc.getBody();
+      mergedBody.clear(); // デフォルトの空段落を削除
+      mergedContents.forEach((item, idx) => {
+        mergedBody.appendParagraph(item.title).setHeading(DocumentApp.ParagraphHeading.HEADING1);
+        item.paragraphs.forEach(p => mergedBody.appendParagraph(p));
+        if (idx < mergedContents.length - 1) {
+          mergedBody.appendPageBreak();
+        }
+      });
+      Logger.log(`合体ドキュメント「${mergedDoc.getName()}」を生成し、フォルダ「${subFolder.getName()}」に保存しました。URL: ${mergedDoc.getUrl()}`);
+    }
   }
