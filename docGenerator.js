@@ -16,15 +16,35 @@ function selectOutputFolder() {
 }
 
 /**
+ * 年・月をプロンプトで入力し、空欄でなければプロパティに保存
+ */
+function selectOutputMonth() {
+  const ui = SpreadsheetApp.getUi();
+  const yearRes = ui.prompt('出力する年を入力してください（例: 2024、空欄で変更しない）', ui.ButtonSet.OK_CANCEL);
+  if (yearRes.getSelectedButton() !== ui.Button.OK) return;
+  const year = yearRes.getResponseText().trim();
+  if (year) {
+    PropertiesService.getScriptProperties().setProperty('TARGET_YEAR', year);
+  }
+
+  const monthRes = ui.prompt('出力する月を入力してください（例: 6、空欄で変更しない）', ui.ButtonSet.OK_CANCEL);
+  if (monthRes.getSelectedButton() !== ui.Button.OK) return;
+  const month = monthRes.getResponseText().trim();
+  if (month) {
+    PropertiesService.getScriptProperties().setProperty('TARGET_MONTH', month);
+  }
+}
+
+/**
  * 指定した年月の口コミデータのみを出力する（将来的にUIから指定可能な設計）
  * @param {string} targetYearMonth - 'yyyy年M月' 形式（例: '2024年6月'）。未指定時は直前の月。
  */
-function generateDoc(targetYearMonth) {
-    // スクリプトプロパティからIDを取得
+function generateDoc() {
     const spreadsheetId = PropertiesService.getScriptProperties().getProperty('SPREADSHEET_ID');
     const folderId = PropertiesService.getScriptProperties().getProperty('FOLDER_ID');
-  
-    // IDが設定されているか確認
+    const targetYear = PropertiesService.getScriptProperties().getProperty('TARGET_YEAR');
+    const targetMonth = PropertiesService.getScriptProperties().getProperty('TARGET_MONTH');
+
     if (!spreadsheetId) {
       Logger.log('エラー: スプレッドシートIDがスクリプトプロパティに設定されていません。');
       SpreadsheetApp.getUi().alert('エラー', 'スクリプトプロパティにSPREADSHEET_IDを設定してください。', SpreadsheetApp.getUi().ButtonSet.OK);
@@ -35,26 +55,20 @@ function generateDoc(targetYearMonth) {
       SpreadsheetApp.getUi().alert('エラー', 'スクリプトプロパティにFOLDER_IDを設定してください。', SpreadsheetApp.getUi().ButtonSet.OK);
       return;
     }
-  
+
     // 対象年月の決定
-    let yearMonthStr = targetYearMonth;
-    let targetYear, targetMonth;
-    if (!yearMonthStr) {
-      // 未指定なら直前の月
-      const now = new Date();
-      const prevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-      yearMonthStr = Utilities.formatDate(prevMonth, Session.getScriptTimeZone(), "yyyy年M月");
-      targetYear = prevMonth.getFullYear();
-      targetMonth = prevMonth.getMonth() + 1;
+    let yearMonthStr;
+    let y, m;
+    if (targetYear && targetMonth) {
+      yearMonthStr = `${targetYear}年${parseInt(targetMonth, 10)}月`;
+      y = parseInt(targetYear, 10);
+      m = parseInt(targetMonth, 10);
     } else {
-      // 'yyyy年M月' 形式から年・月を抽出
-      const m = yearMonthStr.match(/(\d{4})年(\d{1,2})月/);
-      if (m) {
-        targetYear = parseInt(m[1], 10);
-        targetMonth = parseInt(m[2], 10);
-      } else {
-        throw new Error('targetYearMonthの形式が不正です: ' + yearMonthStr);
-      }
+      // 未指定なら今月
+      const now = new Date();
+      yearMonthStr = Utilities.formatDate(now, Session.getScriptTimeZone(), "yyyy年M月");
+      y = now.getFullYear();
+      m = now.getMonth() + 1;
     }
     const yearMonthFolderName = yearMonthStr;
     const parentFolder = DriveApp.getFolderById(folderId);
@@ -87,18 +101,18 @@ function generateDoc(targetYearMonth) {
       // 指定年月の口コミのみ抽出
       const filteredData = allData.filter(row => {
         const rawDate = row[0];
-        let y = null, m = null;
+        let yy = null, mm = null;
         if (rawDate instanceof Date) {
-          y = rawDate.getFullYear();
-          m = rawDate.getMonth() + 1;
+          yy = rawDate.getFullYear();
+          mm = rawDate.getMonth() + 1;
         } else if (typeof rawDate === 'string' && rawDate.match(/^[0-9]{4}[\/\-][0-9]{1,2}[\/\-][0-9]{1,2}$/)) {
           const parsed = new Date(rawDate);
           if (!isNaN(parsed.getTime())) {
-            y = parsed.getFullYear();
-            m = parsed.getMonth() + 1;
+            yy = parsed.getFullYear();
+            mm = parsed.getMonth() + 1;
           }
         }
-        return y === targetYear && m === targetMonth;
+        return yy === y && mm === m;
       });
 
       if (filteredData.length === 0) {
