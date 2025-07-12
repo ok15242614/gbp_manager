@@ -298,11 +298,6 @@ function generateDoc() {
         // ドキュメント全体のフォント設定
         mergedBody.setFontFamily('Noto Sans');
         
-        // 見出し1としてタイトルを追加
-        mergedBody.appendParagraph(mergedDocTitle)
-          .setHeading(DocumentApp.ParagraphHeading.HEADING1)
-          .setAlignment(DocumentApp.HorizontalAlignment.CENTER);
-        
         // 各店舗のデータを追加
         mergedContents.forEach((item, idx) => {
           // 最初の店舗以外はページ区切りを入れる
@@ -315,7 +310,7 @@ function generateDoc() {
             let para;
             if (i === 0) {
               // 店舗名は見出し2として表示
-              para = mergedBody.appendParagraph(p).setHeading(DocumentApp.ParagraphHeading.HEADING2);
+              para = mergedBody.appendParagraph(p).setHeading(DocumentApp.ParagraphHeading.HEADING1);
             } else {
               para = mergedBody.appendParagraph(p);
               para.setFontSize(12);
