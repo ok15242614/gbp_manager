@@ -75,18 +75,7 @@ function generateDoc(targetYearMonth) {
   
     sheets.forEach(sheet => {
       const sheetName = sheet.getName();
-      const docTitle = `【${yearMonthStr}】${sheetName} 口コミレポート`;
-  
-      // 新しいGoogleドキュメントを作成
-      const newDoc = DocumentApp.create(docTitle);
-      const docFile = DriveApp.getFileById(newDoc.getId());
-      docFile.moveTo(subFolder); 
-      const body = newDoc.getBody();
-  
-      // ドキュメントのタイトル/見出しを追加
-      body.appendParagraph(`【${sheetName}】口コミデータ`).setHeading(DocumentApp.ParagraphHeading.HEADING1);
-      body.appendParagraph('---');
-  
+      // 個別ドキュメント作成は行わず、内容のみ収集
       const lastRow = sheet.getLastRow();
       const lastColumn = sheet.getLastColumn();
       if (lastRow <= 1 || lastColumn === 0) {
@@ -94,7 +83,7 @@ function generateDoc(targetYearMonth) {
         return;
       }
       const allData = sheet.getRange(2, 1, lastRow - 1, lastColumn).getValues();
-  
+
       // 指定年月の口コミのみ抽出
       const filteredData = allData.filter(row => {
         const rawDate = row[0];
@@ -102,7 +91,7 @@ function generateDoc(targetYearMonth) {
         if (rawDate instanceof Date) {
           y = rawDate.getFullYear();
           m = rawDate.getMonth() + 1;
-        } else if (typeof rawDate === 'string' && rawDate.match(/^\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2}$/)) {
+        } else if (typeof rawDate === 'string' && rawDate.match(/^[0-9]{4}[\/\-][0-9]{1,2}[\/\-][0-9]{1,2}$/)) {
           const parsed = new Date(rawDate);
           if (!isNaN(parsed.getTime())) {
             y = parsed.getFullYear();
@@ -111,16 +100,20 @@ function generateDoc(targetYearMonth) {
         }
         return y === targetYear && m === targetMonth;
       });
-  
+
       if (filteredData.length === 0) {
         Logger.log(`シート「${sheetName}」に対象月の口コミデータがありません。スキップします。`);
         return;
       }
-  
+
+      // 1店舗分の内容を配列で構築
+      const paragraphs = [];
+      paragraphs.push(`【${sheetName}】口コミデータ`);
+      paragraphs.push('---');
       filteredData.forEach((row, index) => {
         if (index > 0) {
-          body.appendParagraph('');
-          body.appendParagraph('---');
+          paragraphs.push('');
+          paragraphs.push('---');
         }
         const rawDate = row[0];
         const rawRating = row[1];
@@ -129,7 +122,7 @@ function generateDoc(targetYearMonth) {
         let formattedDate = String(rawDate || '').trim();
         if (rawDate instanceof Date) {
           formattedDate = Utilities.formatDate(rawDate, Session.getScriptTimeZone(), "M月d日");
-        } else if (typeof rawDate === 'string' && rawDate.match(/^\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2}$/)) {
+        } else if (typeof rawDate === 'string' && rawDate.match(/^[0-9]{4}[\/\-][0-9]{1,2}[\/\-][0-9]{1,2}$/)) {
           try {
             const parsedDate = new Date(rawDate);
             if (!isNaN(parsedDate.getTime())) {
@@ -146,20 +139,14 @@ function generateDoc(targetYearMonth) {
         } else {
           starRating = String(rawRating || '(評価なし)');
         }
-        body.appendParagraph(`${formattedDate}`);
-        body.appendParagraph(`${starRating}`);
-        body.appendParagraph('');
-        body.appendParagraph(`${content}`);
+        paragraphs.push(`${formattedDate}`);
+        paragraphs.push(`${starRating}`);
+        paragraphs.push('');
+        paragraphs.push(`${content}`);
       });
-  
-      // 全店舗まとめデータとして保存（タイトルなし、本文のみ）
-      mergedContents.push({
-        paragraphs: body.getParagraphs().map(p => p.copy())
-      });
-  
-      Logger.log(`ドキュメント「${newDoc.getName()}」を生成し、フォルダ「${subFolder.getName()}」に保存しました。URL: ${newDoc.getUrl()}`);
+      mergedContents.push({ paragraphs });
     });
-  
+
     // --- 全店舗まとめドキュメント作成 ---
     if (mergedContents.length > 0) {
       const mergedDocTitle = `【${yearMonthStr}】全店舗口コミレポート`;
