@@ -1,4 +1,21 @@
 /**
+ * 出力先フォルダIDをダイアログで入力し、スクリプトプロパティに保存
+ */
+function selectOutputFolder() {
+  const ui = SpreadsheetApp.getUi();
+  const response = ui.prompt('出力先フォルダIDを入力してください', ui.ButtonSet.OK_CANCEL);
+  if (response.getSelectedButton() == ui.Button.OK) {
+    const folderId = response.getResponseText().trim();
+    if (folderId) {
+      PropertiesService.getScriptProperties().setProperty('FOLDER_ID', folderId);
+      ui.alert('フォルダIDを保存しました。');
+    } else {
+      ui.alert('フォルダIDが入力されていません。');
+    }
+  }
+}
+
+/**
  * 指定した年月の口コミデータのみを出力する（将来的にUIから指定可能な設計）
  * @param {string} targetYearMonth - 'yyyy年M月' 形式（例: '2024年6月'）。未指定時は直前の月。
  */
