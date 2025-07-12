@@ -1,7 +1,6 @@
 /**
  * docGenerator.js - Google Apps Scriptによる口コミデータのドキュメント生成ツール
  * 
- * 指定した年月のデータを抽出し、見やすいドキュメントを生成します
  */
 
 /**
@@ -26,7 +25,7 @@ function selectOutputFolder() {
     // フォルダIDの存在確認
     DriveApp.getFolderById(folderId);
     PropertiesService.getScriptProperties().setProperty('FOLDER_ID', folderId);
-    ui.alert('成功', 'フォルダIDを保存しました。', ui.ButtonSet.OK);
+    SpreadsheetApp.getActiveSpreadsheet().toast('フォルダIDを保存しました。', '成功', 3);
     return true;
   } catch (error) {
     ui.alert('エラー', '無効なフォルダIDです: ' + error.message, ui.ButtonSet.OK);
@@ -91,7 +90,7 @@ function selectOutputMonth() {
   scriptProps.setProperty('TARGET_YEAR', year);
   scriptProps.setProperty('TARGET_MONTH', month);
   
-  ui.alert('成功', `出力対象を ${year}年${month}月 に設定しました。`, ui.ButtonSet.OK);
+  SpreadsheetApp.getActiveSpreadsheet().toast(`出力対象を ${year}年${month}月 に設定しました。`, '成功', 3);
   return true;
 }
 
@@ -327,7 +326,7 @@ function generateDoc() {
         
         // 成功メッセージ
         const docUrl = mergedDoc.getUrl();
-        ui.alert('成功', `全店舗まとめドキュメント「${mergedDocTitle}」を生成しました。\n\nURL: ${docUrl}`, ui.ButtonSet.OK);
+        SpreadsheetApp.getActiveSpreadsheet().toast(`全店舗まとめドキュメント「${mergedDocTitle}」を生成しました。\nURL: ${docUrl}`, '成功', 5);
         Logger.log(`ドキュメント「${mergedDocTitle}」を作成しました。URL: ${docUrl}`);
         
       } catch (error) {
@@ -335,7 +334,7 @@ function generateDoc() {
         Logger.log(`ドキュメント作成エラー: ${error}`);
       }
     } else {
-      ui.alert('情報', `対象期間(${yearMonthStr})のデータが見つかりませんでした。`, ui.ButtonSet.OK);
+      SpreadsheetApp.getActiveSpreadsheet().toast(`対象期間(${yearMonthStr})のデータが見つかりませんでした。`, '情報', 5);
     }
     
   } catch (error) {
