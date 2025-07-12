@@ -155,8 +155,20 @@ function generateDoc(targetYearMonth) {
       mergedDocFile.moveTo(subFolder);
       const mergedBody = mergedDoc.getBody();
       mergedBody.clear();
+      // 全体のフォントをNoto Sansに統一
+      mergedBody.setFontFamily('Noto Sans');
       mergedContents.forEach((item, idx) => {
-        item.paragraphs.forEach(p => mergedBody.appendParagraph(p));
+        item.paragraphs.forEach((p, i) => {
+          let para;
+          if (i === 0) {
+            para = mergedBody.appendParagraph(p).setHeading(DocumentApp.ParagraphHeading.HEADING2);
+          } else {
+            para = mergedBody.appendParagraph(p);
+            para.setFontSize(12);
+          }
+          // 通常段落・見出しともにフォントをNoto Sansに統一
+          para.setFontFamily('Noto Sans');
+        });
         if (idx < mergedContents.length - 1) {
           mergedBody.appendPageBreak();
         }
