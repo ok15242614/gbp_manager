@@ -70,16 +70,10 @@ function generateDoc() {
       y = now.getFullYear();
       m = now.getMonth() + 1;
     }
-    const yearMonthFolderName = yearMonthStr;
+    // ここで対象年月をトースト通知
+    SpreadsheetApp.getActiveSpreadsheet().toast(`「${yearMonthStr}」のデータを出力します。`, '出力対象', 5);
     const parentFolder = DriveApp.getFolderById(folderId);
-    let subFolder;
-    // サブフォルダが存在するか確認
-    const folders = parentFolder.getFoldersByName(yearMonthFolderName);
-    if (folders.hasNext()) {
-      subFolder = folders.next();
-    } else {
-      subFolder = parentFolder.createFolder(yearMonthFolderName);
-    }
+    // サブフォルダ作成・取得の処理を削除
   
     // 全店舗まとめ用データを格納する配列
     const mergedContents = [];
@@ -166,10 +160,9 @@ function generateDoc() {
       const mergedDocTitle = `【${yearMonthStr}】全店舗口コミレポート`;
       const mergedDoc = DocumentApp.create(mergedDocTitle);
       const mergedDocFile = DriveApp.getFileById(mergedDoc.getId());
-      mergedDocFile.moveTo(subFolder);
+      mergedDocFile.moveTo(parentFolder); // サブフォルダではなく親フォルダ直下に保存
       const mergedBody = mergedDoc.getBody();
       mergedBody.clear();
-      // 全体のフォントをNoto Sansに統一
       mergedBody.setFontFamily('Noto Sans');
       mergedContents.forEach((item, idx) => {
         item.paragraphs.forEach((p, i) => {
@@ -180,13 +173,12 @@ function generateDoc() {
             para = mergedBody.appendParagraph(p);
             para.setFontSize(12);
           }
-          // 通常段落・見出しともにフォントをNoto Sansに統一
           para.setFontFamily('Noto Sans');
         });
         if (idx < mergedContents.length - 1) {
           mergedBody.appendPageBreak();
         }
       });
-      Logger.log(`全店舗まとめドキュメント「${mergedDoc.getName()}」を生成し、フォルダ「${subFolder.getName()}」に保存しました。URL: ${mergedDoc.getUrl()}`);
+      Logger.log(`全店舗まとめドキュメント「${mergedDoc.getName()}」を生成し、フォルダ「${parentFolder.getName()}」に保存しました。URL: ${mergedDoc.getUrl()}`);
     }
   }
