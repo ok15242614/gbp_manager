@@ -1,0 +1,12 @@
+# ローカル開発用ファイル
+cursor.md
+
+# OSファイル
+.DS_Store
+Thumbs.db
+
+# エディタ/IDE設定
+.vscode/
+.idea/
+*.swp
+*.swo 
